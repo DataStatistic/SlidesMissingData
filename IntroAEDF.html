@@ -5,7 +5,8 @@
     <meta charset="utf-8" />
     <meta name="author" content="Mario José Pacheco López" />
     <meta name="author" content="Universidad Santo Tomás" />
-    <meta name="author" content="mariopacheco@usta.edu.co ~" />
+    <meta name="author" content="mariopacheco@usta.edu.co" />
+    <meta name="author" content="https://github.com/DataStatistic/SlidesMissingData ~" />
     <script src="IntroAEDF_files/header-attrs-2.28/header-attrs.js"></script>
     <link href="IntroAEDF_files/remark-css-0.0.1/default.css" rel="stylesheet" />
     <link href="IntroAEDF_files/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
@@ -31,6 +32,9 @@ class: inverse, top, middle, title-slide
 ]
 .author[
 ### <a href="mailto:mariopacheco@usta.edu.co" class="email">mariopacheco@usta.edu.co</a>
+]
+.author[
+### <a href="https://github.com/DataStatistic/SlidesMissingData" class="uri">https://github.com/DataStatistic/SlidesMissingData</a>
 ~
 ]
 .date[
@@ -2247,34 +2251,6 @@ Comparación de dos protocolos de recuperación postoperatoria en pacientes con 
 &lt;/div&gt;
 
 ---
-# Un problema de datos faltantes
-
-## Importando el conjunto de datos
-
-
-``` r
-library(readxl)
-
-# Conjunto de datos
-url = "http://www.ime.usp.br/~jmsinger/Dados/Fernandes2002.xls"
-temp = tempfile(fileext = ".xls")
-download.file(url, destfile = temp, mode = "wb")
-
-datos = read_excel(temp) %&gt;%
-  select(-c(1, 4:6, 8:13, 15, 20)) %&gt;%
-  rename(Edad = IDADE, Sexo = SEXO, IMC = IMC,
-         Hospitalización = DIAS, Intervención = T_IC,
-         Anestesia = T_A, Recuperación = T_REC1,
-         Perfusión = T_P, Tipo = `TIPO DE PACIENTE`,
-         Protocolo = `MÉTODO DE RECUPERAÇÃO`) %&gt;%
-  mutate(Sexo = factor(ifelse(Sexo == 0, "Femenino", "Masculino")),
-         Tipo = factor(ifelse(Tipo == 0, "Congénito","Coronario")),
-         Protocolo = factor(ifelse(Protocolo == 0, "Convencional", "Acelerada"), 
-                            labels = c("Convencional", "Acelerada")),
-         IMC = ifelse(IMC==0, NA, IMC))
-```
-
----
 
 # Un problema de datos faltantes
 
@@ -3055,6 +3031,35 @@ datos = read_excel(temp) %&gt;%
 &lt;/table&gt;&lt;/div&gt;
 ---
 
+# Un problema de datos faltantes
+
+## Importando el conjunto de datos
+
+
+``` r
+library(readxl)
+library(dplyr)
+
+# Conjunto de datos
+url = "http://www.ime.usp.br/~jmsinger/Dados/Fernandes2002.xls"
+temp = tempfile(fileext = ".xls")
+download.file(url, destfile = temp, mode = "wb")
+
+datos = read_excel(temp) %&gt;%
+  select(-c(1, 4:6, 8:13, 15, 20)) %&gt;%
+  rename(Edad = IDADE, Sexo = SEXO, IMC = IMC,
+         Hospitalización = DIAS, Intervención = T_IC,
+         Anestesia = T_A, Recuperación = T_REC1,
+         Perfusión = T_P, Tipo = `TIPO DE PACIENTE`,
+         Protocolo = `MÉTODO DE RECUPERAÇÃO`) %&gt;%
+  mutate(Sexo = factor(ifelse(Sexo == 0, "Femenino", "Masculino")),
+         Tipo = factor(ifelse(Tipo == 0, "Congénito","Coronario")),
+         Protocolo = factor(ifelse(Protocolo == 0, "Convencional", "Acelerada"), 
+                            labels = c("Convencional", "Acelerada")),
+         IMC = ifelse(IMC==0, NA, IMC))
+```
+
+---
 # Análisis estadístico
 
 ## Pasos para desarrollar el análisis
@@ -3341,9 +3346,47 @@ datos %&gt;%
 
 # Tratamiento de datos faltantes
 
+## Matrices de correlación
+
+
+``` r
+library(ggcorrplot)
+
+Rcc = datos %&gt;% 
+  select(where(is.numeric)) %&gt;%
+  cor(use = "complete.obs")
+
+ggcorrplot(Rcc, type = "lower", colors = c("#E46726", "white", "#6D9EC1"))
+
+Rcd = datos %&gt;% 
+  select(where(is.numeric)) %&gt;%
+  cor(use = "pairwise.complete.obs")
+
+ggcorrplot(Rcd, type = "lower", colors = c("#E46726", "white", "#6D9EC1"))
+```
+---
+
+# Tratamiento de datos faltantes
+
 ## Relación entre variables
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-17-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-18-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Tratamiento de datos faltantes
+
+## Relación entre variables
+
+
+``` r
+Estado = ifelse(ici(datos), "Faltantes", "Observados")
+
+ggplot(datos, aes(x = Intervención,
+                  y = Hospitalización,
+                  colour = Estado)) +
+  geom_jitter(size = 2.5, alpha = 0.8)
+```
 
 ---
 
@@ -3423,7 +3466,7 @@ datos %&gt;%
 
 &lt;div style="font-size: 1.3em;"&gt; Consiste en reemplazar cada valor faltante en una variable por el promedio de los valores observados de la variable. &lt;/div&gt;
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-18-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-20-1.png" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -3431,7 +3474,7 @@ datos %&gt;%
 
 ## Imputación por media incondicional
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-19-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-21-1.png" style="display: block; margin: auto;" /&gt;
 ---
 
 # Métodos de imputación
@@ -3442,7 +3485,7 @@ datos %&gt;%
 &lt;div style="font-size: 1.3em;"&gt; Consiste en reemplazar cada valor faltante en una variable por valores aleatorios seleccionados de los valores observados de la variable. &lt;/div&gt;
 
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-20-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-22-1.png" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -3450,7 +3493,7 @@ datos %&gt;%
 
 ## Imputación aleatoria
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-21-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-23-1.png" style="display: block; margin: auto;" /&gt;
 ---
 
 # Métodos de imputación
@@ -3465,6 +3508,12 @@ datos.imp = datos %&gt;%
   select(where(is.numeric)) %&gt;%
   mutate(across(everything(), \(x) impute(x, fun = mean))) # media incondicional
 # mutate(across(everything(), \(x) impute(x, "random")) # aleatoria
+
+ggplot(data.frame(
+   Tipo = rep(c("Observados", "Imputados"), rep(nrow(datos), 2)),
+   Intervención = c(datos$Intervención, datos.imp$Intervención)),
+   aes(x = Intervención, color = Tipo)) +
+  geom_density()
 
 Estado = ifelse(ici(datos[c("Intervención", "Hospitalización")]), "Promedio", Estado)
 
@@ -3506,22 +3555,22 @@ $$
 
 ## Métodos basados en regresión
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-23-1.png" style="display: block; margin: auto;" /&gt;
----
-
-# Métodos de imputación
-
-## Imputación por regresión estocástica
-
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-24-1.png" style="display: block; margin: auto;" /&gt;
-
----
-
-# Métodos de imputación
-
-## Imputación por regresión estocástica
-
 &lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-25-1.png" style="display: block; margin: auto;" /&gt;
+---
+
+# Métodos de imputación
+
+## Imputación por regresión estocástica
+
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-26-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Métodos de imputación
+
+## Imputación por regresión estocástica
+
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-27-1.png" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -3585,14 +3634,14 @@ for(j in 2:k){
 
 ## El método *Hot-Deck*
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-27-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-29-1.png" style="display: block; margin: auto;" /&gt;
 
 ---
 # Métodos de imputación
 
 ## El método *Hot-Deck*
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-28-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-30-1.png" style="display: block; margin: auto;" /&gt;
 ---
 # Métodos de imputación
 
@@ -3628,14 +3677,14 @@ datos.imp = hotdeck(datos,
 
 ## El método *kNN*
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-30-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-32-1.png" style="display: block; margin: auto;" /&gt;
 
 ---
 # Métodos de imputación
 
 ## El método *kNN*
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-31-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-33-1.png" style="display: block; margin: auto;" /&gt;
 
 ---
 # Métodos de imputación
@@ -3670,7 +3719,7 @@ datos.imp = kNN(datos,
 
 ## Coincidencia media predictiva (*pmm*)
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-33-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-35-1.png" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -3678,7 +3727,7 @@ datos.imp = kNN(datos,
 
 ## Coincidencia media predictiva (*pmm*)
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-34-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-36-1.png" style="display: block; margin: auto;" /&gt;
 ---
 # Métodos de imputación
 
@@ -3823,24 +3872,24 @@ proc.imp$imp$Hospitalización[1:10,]
 
 ## Algoritmo MICE
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-40-1.png" style="display: block; margin: auto;" /&gt;
-
----
-
-# Métodos de imputación
-
-## Algoritmo MICE
-
-
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-41-1.png" style="display: block; margin: auto;" /&gt;
-
----
-
-# Métodos de imputación
-
-## Algoritmo MICE
-
 &lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-42-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Métodos de imputación
+
+## Algoritmo MICE
+
+
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-43-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Métodos de imputación
+
+## Algoritmo MICE
+
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-44-1.png" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -4012,7 +4061,7 @@ $$
 ]
 
 .pull-left[
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-46-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-48-1.png" style="display: block; margin: auto;" /&gt;
 ]
 &lt;/div&gt;
 
@@ -4254,23 +4303,23 @@ t.imp = with(proc.imp.ml,
 
 ## Análisis de componentes principales
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-53-1.png" style="display: block; margin: auto;" /&gt;
-
----
-
-# Métodos multivariados
-
-## Análisis de componentes principales
-
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-54-1.png" style="display: block; margin: auto;" /&gt;
-
----
-
-# Métodos multivariados
-
-## Análisis de componentes principales
-
 &lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-55-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Métodos multivariados
+
+## Análisis de componentes principales
+
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-56-1.png" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Métodos multivariados
+
+## Análisis de componentes principales
+
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-57-1.png" style="display: block; margin: auto;" /&gt;
 
 ---
 
@@ -4480,7 +4529,7 @@ $$
 
 ## Agrupamiento
 
-&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-58-1.png" style="display: block; margin: auto;" /&gt;
+&lt;img src="IntroAEDF_files/figure-html/unnamed-chunk-60-1.png" style="display: block; margin: auto;" /&gt;
 
 ---
 
